@@ -116,22 +116,36 @@
 
     </RelativeLayout>
 
-
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:background="@color/colorPrimary">
-
-        <Button
-            android:id="@+id/button_start"
+        <LinearLayout
+            android:layout_alignParentBottom="true"
+            android:background="@drawable/ripple_effect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/start_recording"
-            android:textColor="@android:color/white"
-            android:background="@drawable/ripple_effect"
-            tools:text="@string/start_recording"/>
+            android:orientation="vertical">
 
-    </RelativeLayout>
+            <Button
+                android:id="@+id/button_pause"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/colorPrimary"
+                android:text="@string/pause_recording"
+                android:textColor="@android:color/white"
+                tools:text="@string/pause_recording" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="5dp" />
+
+            <Button
+                android:id="@+id/button_start"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/colorPrimary"
+                android:text="@string/start_recording"
+                android:textColor="@android:color/white"
+                tools:text="@string/start_recording" />
+        </LinearLayout>
+
+
 
 </RelativeLayout>
