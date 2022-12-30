@@ -15,6 +15,7 @@ class FileObserver extends android.os.FileObserver {
     private final String mPath;
     private final int mMask;
     private final MyListener ml;
+    private boolean hasDispatchedComplete = false;
 
     FileObserver(String path, MyListener ml) {
         super(path, ALL_EVENTS);
@@ -64,12 +65,9 @@ class FileObserver extends android.os.FileObserver {
 
     @Override
     public void onEvent(int event, final String path) {
-        if (event == android.os.FileObserver.CLOSE_WRITE) {
-            new Handler(Looper.getMainLooper()).post(new Runnable() {
-                public void run() {
-                    ml.onCompleteCallback();
-                }
-            });
+        if (event == android.os.FileObserver.CLOSE_WRITE && !hasDispatchedComplete) {
+            hasDispatchedComplete = true;
+            new Handler(Looper.getMainLooper()).post(ml::onCompleteCallback);
         }
     }
 
