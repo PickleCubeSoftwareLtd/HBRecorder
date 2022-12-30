@@ -10,7 +10,6 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.os.Environment;
 
 import androidx.annotation.DrawableRes;
@@ -39,7 +38,7 @@ import static com.hbisoft.hbrecorder.Constants.ON_START_KEY;
  * Copyright (c) 2019 . All rights reserved.
  */
 
-@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+@SuppressWarnings("unused")
 public class HBRecorder implements MyListener {
     private int mScreenWidth;
     private int mScreenHeight;
@@ -73,7 +72,6 @@ public class HBRecorder implements MyListener {
     boolean isMaxDurationSet = false;
     int maxDuration = 0;
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public HBRecorder(Context context, HBRecorderListener listener) {
         this.context = context.getApplicationContext();
         this.hbRecorderListener = listener;
@@ -404,16 +402,13 @@ public class HBRecorder implements MyListener {
                 onTick(0);
                 // Since the timer is running on a different thread
                 // UI chances should be called from the UI Thread
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            stopScreenRecording();
-                            observer.stopWatching();
-                            hbRecorderListener.HBRecorderOnComplete();
-                        } catch (Exception e){
-                            e.printStackTrace();
-                        }
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    try {
+                        stopScreenRecording();
+                        observer.stopWatching();
+                        hbRecorderListener.HBRecorderOnComplete();
+                    } catch (Exception e){
+                        e.printStackTrace();
                     }
                 });
             }
