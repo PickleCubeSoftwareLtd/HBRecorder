@@ -24,7 +24,6 @@ import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.nio.file.Paths;
 import java.util.Objects;
 
 import static com.hbisoft.hbrecorder.Constants.ERROR_KEY;
