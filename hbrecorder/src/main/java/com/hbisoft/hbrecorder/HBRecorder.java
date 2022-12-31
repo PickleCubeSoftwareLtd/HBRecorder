@@ -24,6 +24,8 @@ import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.nio.file.Paths;
+import java.util.Objects;
 
 import static com.hbisoft.hbrecorder.Constants.ERROR_KEY;
 import static com.hbisoft.hbrecorder.Constants.ERROR_REASON_KEY;
@@ -39,7 +41,7 @@ import static com.hbisoft.hbrecorder.Constants.ON_START_KEY;
  */
 
 @SuppressWarnings("unused")
-public class HBRecorder implements MyListener {
+public class HBRecorder implements FileObserverCallback {
     private int mScreenWidth;
     private int mScreenHeight;
     private int mScreenDensity;
@@ -429,8 +431,10 @@ public class HBRecorder implements MyListener {
 
     /*Complete callback method*/
     @Override
-    public void onCompleteCallback() {
-        observer.stopWatching();
-        hbRecorderListener.HBRecorderOnComplete();
+    public void onFileComplete(String file) {
+        if(Objects.equals(file, getFilePath())) {
+            observer.stopWatching();
+            hbRecorderListener.HBRecorderOnComplete();
+        }
     }
 }

@@ -17,7 +17,6 @@ import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -175,18 +174,6 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
             Log.e("HBRecorderCodecInfo", "MimeType not supported");
         }
 
-    }
-
-    //Create Folder
-    //Only call this on Android 9 and lower (getExternalStoragePublicDirectory is deprecated)
-    //This can still be used on Android 10> but you will have to add android:requestLegacyExternalStorage="true" in your Manifest
-    private void createFolder() {
-        File f1 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "HBRecorder");
-        if (!f1.exists()) {
-            if (f1.mkdirs()) {
-                Log.i("Folder ", "created");
-            }
-        }
     }
 
     //Init Views
@@ -569,7 +556,7 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
 
     private void setOutputPath() {
         String filename = generateFileName();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !custom_settings_switch.isChecked()) {
             resolver = getContentResolver();
             contentValues = new ContentValues();
             contentValues.put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/" + "HBRecorder");
@@ -581,9 +568,11 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
             hbRecorder.setFileName(filename);
             hbRecorder.setOutputUri(mUri);
         } else {
-            createFolder();
-            hbRecorder.setOutputPath(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES) + "/HBRecorder");
-        }
+            // Path output testing
+            File dir = getCacheDir();
+            Log.e("HBRecorder", "Setting output path to: " + dir.getPath());
+            hbRecorder.setOutputPath(dir.getPath());
+          }
     }
 
     //Generate a timestamp to be used as a file name
