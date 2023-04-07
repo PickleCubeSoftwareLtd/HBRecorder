@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -33,6 +34,8 @@ import static com.hbisoft.hbrecorder.Constants.MAX_FILE_SIZE_KEY;
 import static com.hbisoft.hbrecorder.Constants.NO_SPECIFIED_MAX_SIZE;
 import static com.hbisoft.hbrecorder.Constants.ON_COMPLETE_KEY;
 import static com.hbisoft.hbrecorder.Constants.ON_START_KEY;
+import static com.hbisoft.hbrecorder.Constants.ON_PAUSE_KEY;
+import static com.hbisoft.hbrecorder.Constants.ON_RESUME_KEY;
 
 /**
  * Created by HBiSoft on 13 Aug 2019
@@ -95,6 +98,36 @@ public class HBRecorder implements FileObserverCallback {
         mWasUriSet = true;
         mUri = uri;
     }
+
+    // WILL IMPLEMENT THIS AT A LATER STAGE
+    // DEVELOPERS ARE WELCOME TO LOOK AT THIS AND CREATE A PULL REQUEST
+    /*Mute microphone*/
+    /*public void setMicMuted(boolean state){
+        if (context!=null) {
+            try {
+                ((AudioManager)context.getSystemService(Context.AUDIO_SERVICE)).setStreamMute(AudioManager.STREAM_SYSTEM,true);
+
+                AudioManager myAudioManager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
+
+                // get the working mode and keep it
+                int workingAudioMode = myAudioManager.getMode();
+
+                myAudioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+
+                // change mic state only if needed
+                if (myAudioManager.isMicrophoneMute() != state) {
+                    myAudioManager.setMicrophoneMute(state);
+                }
+
+                // set back the original working mode
+                myAudioManager.setMode(workingAudioMode);
+            }catch (Exception e){
+                Log.e("HBRecorder", "Muting mic failed with the following exception:");
+                e.printStackTrace();
+            }
+
+        }
+    }*/
 
     /*Set max duration in seconds */
     public void setMaxDuration(int seconds){
@@ -342,6 +375,7 @@ public class HBRecorder implements FileObserverCallback {
                         String onComplete = resultData.getString(ON_COMPLETE_KEY);
                         int onStartCode = resultData.getInt(ON_START_KEY);
                         int errorCode = resultData.getInt(ERROR_KEY);
+                        // There was an error
                         if (errorListener != null) {
                             //Stop countdown if it was set
                             stopCountDown();
@@ -361,7 +395,9 @@ public class HBRecorder implements FileObserverCallback {
                                 // Can be ignored
                             }
 
-                        }else if (onComplete != null){
+                        }
+                        // OnComplete was called
+                        else if (onComplete != null){
                             //Stop countdown if it was set
                             stopCountDown();
                             //OnComplete for when Uri was passed
@@ -369,11 +405,23 @@ public class HBRecorder implements FileObserverCallback {
                                 hbRecorderListener.HBRecorderOnComplete();
                             }
                             wasOnErrorCalled = false;
-                        }else if (onStartCode != 0){
+                        }
+                        // OnStart was called
+                        else if (onStartCode != 0){
                             hbRecorderListener.HBRecorderOnStart();
                             //Check if max duration was set and start count down
                             if (isMaxDurationSet){
                                 startCountdown();
+                            }
+                        }
+                        // OnPause/onResume was called
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            String onPause = resultData.getString(ON_PAUSE_KEY);
+                            String onResume = resultData.getString(ON_RESUME_KEY);
+                            if (onPause != null) {
+                                hbRecorderListener.HBRecorderOnPause();
+                            } else if (onResume != null) {
+                                hbRecorderListener.HBRecorderOnResume();
                             }
                         }
                     }

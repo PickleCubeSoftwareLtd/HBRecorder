@@ -1,3 +1,10 @@
+**<p align="center">As you can imagine, creating and maintaining a library like this takes a lot of time.</br> If you would like to thank me, you can do so below:</p>**
+
+<p align="center"><a href="https://www.buymeacoffee.com/HBiSoft" target="_blank" ><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 164px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a></p>
+
+---
+</br>
+
 # HBRecorder
 [![](https://jitpack.io/v/HBiSoft/HBRecorder.svg)](https://jitpack.io/#HBiSoft/HBRecorder)
 [![Android Arsenal]( https://img.shields.io/badge/Android%20Arsenal-HBRecorder-green.svg?style=flat )]( https://android-arsenal.com/details/1/7897 )
@@ -8,38 +15,13 @@
 
 </br>
 
----
-
-**<p align="center">If you want to thank me for this library, you can do so below:</p>**
-
-<p align="center"><a href="https://www.buymeacoffee.com/HBiSoft" target="_blank" ><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 164px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a></p>
-
----
-
 <h2 align="center"><b>Demo:</b></h2>
 
-<p align="center">Download the demo app  <a href="https://github.com/HBiSoft/HBRecorder/releases/download/2.0.5/HBRecorderDemo.apk"><nobr>here</nobr></a></p>
+<p align="center">Download the demo app  <a href="https://github.com/HBiSoft/HBRecorder/releases/download/3.0.1/HBRecorderDemo.apk"><nobr>here</nobr></a></p>
 
 <p align="center"><img src="https://user-images.githubusercontent.com/35602540/66485516-3e78fd80-eaa9-11e9-9fea-f59bfa7c1389.gif" width="247" height="480" </p>
 
 </br></br>
-
-
-<h2 align="center">Take part in the poll</h2>
-
-<p align="center">Let other developers know what version you have tested:</p></br></br>
-
-<p align="center">Android 12 was added to the poll on 30 June 2022</p></br>
-<p align="center"><a href="https://api.gh-polls.com/poll/01G6R5G13N1Z7D75SE8CMCW8ZN/Android%2012/vote"><img src="https://api.gh-polls.com/poll/01G6R5G13N1Z7D75SE8CMCW8ZN/Android%2012" alt=""></a></p>
-<p align="center"><a href="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%2011/vote"><img src="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%2011" alt=""></a></p>
-<p align="center"><a href="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%2010/vote"><img src="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%2010" alt=""></a></p>
-<p align="center"><a href="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%209/vote"><img src="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%209" alt=""></a></p>
-<p align="center"><a href="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%208/vote"><img src="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%208" alt=""></a></p>
-<p align="center"><a href="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%207/vote"><img src="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%207" alt=""></a></p>
-<p align="center"><a href="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%206/vote"><img src="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%206" alt=""></a></p>
-<p align="center"><a href="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%205/vote"><img src="https://api.gh-polls.com/poll/01EEA8FRQ42BVQ4XB6JGDAM8BH/Android%205" alt=""></a></p>
-
-</br>
     
 
 **Adding the library to your project:**
@@ -59,7 +41,7 @@ Implement library in your app level build.gradle:
 
 ```java
 dependencies {
-    implementation 'com.github.HBiSoft:HBRecorder:2.0.5'
+    implementation 'com.github.HBiSoft:HBRecorder:3.0.1'
 }
 ```
     
@@ -87,6 +69,16 @@ public void HBRecorderOnComplete() {
 @Override
 public void HBRecorderOnError(int errorCode) {
     //When an error occurs
+}
+
+@Override
+public void HBRecorderOnPause() {
+    //When recording was paused
+}
+
+@Override
+public void HBRecorderOnResume() {
+    //When recording was resumed
 }
 ```
     

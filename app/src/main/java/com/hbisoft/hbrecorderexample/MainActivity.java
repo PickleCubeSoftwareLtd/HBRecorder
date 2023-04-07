@@ -1,38 +1,38 @@
 package com.hbisoft.hbrecorderexample;
 
-import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
-import static com.hbisoft.hbrecorder.Constants.MAX_FILE_SIZE_REACHED_ERROR;
-import static com.hbisoft.hbrecorder.Constants.SETTINGS_ERROR;
-
 import android.Manifest;
-import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.MediaScannerConnection;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.RadioGroup;
+import androidx.appcompat.widget.SwitchCompat;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -40,6 +40,7 @@ import com.hbisoft.hbrecorder.HBRecorder;
 import com.hbisoft.hbrecorder.HBRecorderCodecInfo;
 import com.hbisoft.hbrecorder.HBRecorderListener;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.sql.Date;
 import java.text.SimpleDateFormat;
@@ -47,6 +48,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+
+import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
+import static com.hbisoft.hbrecorder.Constants.MAX_FILE_SIZE_REACHED_ERROR;
+import static com.hbisoft.hbrecorder.Constants.SETTINGS_ERROR;
 
 
 /**
@@ -80,44 +85,34 @@ import java.util.Map;
 @SuppressWarnings({"SameParameterValue"})
 public class MainActivity extends AppCompatActivity implements HBRecorderListener {
     //Permissions
+    private static final int SCREEN_RECORD_REQUEST_CODE = 777;
     private static final int PERMISSION_REQ_ID_RECORD_AUDIO = 22;
+    private static final int PERMISSION_REQ_POST_NOTIFICATIONS = 33;
     private static final int PERMISSION_REQ_ID_WRITE_EXTERNAL_STORAGE = PERMISSION_REQ_ID_RECORD_AUDIO + 1;
-    //Reference to checkboxes and radio buttons
-    boolean wasHDSelected = true;
-    boolean isAudioEnabled = true;
-    //Should custom settings be used
-    SwitchCompat custom_settings_switch;
-    //For Android 10> we will pass a Uri to HBRecorder
-    //This is not necessary - You can still use getExternalStoragePublicDirectory
-    //But then you will have to add android:requestLegacyExternalStorage="true" in your Manifest
-    //IT IS IMPORTANT TO SET THE FILE NAME THE SAME AS THE NAME YOU USE FOR TITLE AND DISPLAY_NAME
-    ContentResolver resolver;
-    ContentValues contentValues;
-    Uri mUri;
     private boolean hasPermissions = false;
+
     //Declare HBRecorder
     private HBRecorder hbRecorder;
+
     //Start/Stop Button
-    private Button startBtn;
-    //Pause/Resume
-    private Button pauseBtn;
+    private Button startbtn;
+
     //HD/SD quality
     private RadioGroup radioGroup;
+
     //Should record/show audio/notification
     private CheckBox recordAudioCheckBox;
 
-    // You can do the assignment inside onAttach or onCreate, i.e, before the activity is displayed
-    ActivityResultLauncher<Intent> startMediaProjection = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (result.getResultCode() == Activity.RESULT_OK) {
-                    //Set file path or Uri depending on SDK version
-                    setOutputPath();
-                    //Start screen recording
-                    hbRecorder.startScreenRecording(result.getData(), result.getResultCode());
-                }
-            }
-    );
+    //Reference to checkboxes and radio buttons
+    boolean wasHDSelected = true;
+    boolean isAudioEnabled = true;
+
+    //Should custom settings be used
+    SwitchCompat custom_settings_switch;
+
+    // Max file size in K
+    private EditText maxFileSizeInK;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -129,57 +124,72 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
         setRadioGroupCheckListener();
         setRecordAudioCheckBoxListener();
 
-        //Init HBRecorder
-        hbRecorder = new HBRecorder(this, this);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            //Init HBRecorder
+            hbRecorder = new HBRecorder(this, this);
 
-        //When the user returns to the application, some UI changes might be necessary,
-        //check if recording is in progress and make changes accordingly
-        if (hbRecorder.isBusyRecording()) {
-            startBtn.setText(R.string.stop_recording);
-            pauseBtn.setText(hbRecorder.isRecordingPaused() ? R.string.resume_recording : R.string.pause_recording);
+            //When the user returns to the application, some UI changes might be necessary,
+            //check if recording is in progress and make changes accordingly
+            if (hbRecorder.isBusyRecording()) {
+                startbtn.setText(R.string.stop_recording);
+            }
         }
 
         // Examples of how to use the HBRecorderCodecInfo class to get codec info
         HBRecorderCodecInfo hbRecorderCodecInfo = new HBRecorderCodecInfo();
-        int mWidth = hbRecorder.getDefaultWidth();
-        int mHeight = hbRecorder.getDefaultHeight();
-        String mMimeType = "video/avc";
-        int mFPS = 30;
-        if (hbRecorderCodecInfo.isMimeTypeSupported(mMimeType)) {
-            String defaultVideoEncoder = hbRecorderCodecInfo.getDefaultVideoEncoderName(mMimeType);
-            boolean isSizeAndFrameRateSupported = hbRecorderCodecInfo.isSizeAndFramerateSupported(mWidth, mHeight, mFPS, mMimeType, ORIENTATION_PORTRAIT);
-            Log.e("EXAMPLE", "THIS IS AN EXAMPLE OF HOW TO USE THE (HBRecorderCodecInfo) TO GET CODEC INFO:");
-            Log.e("HBRecorderCodecInfo", "defaultVideoEncoder for (" + mMimeType + ") -> " + defaultVideoEncoder);
-            Log.e("HBRecorderCodecInfo", "MaxSupportedFrameRate -> " + hbRecorderCodecInfo.getMaxSupportedFrameRate(mWidth, mHeight, mMimeType));
-            Log.e("HBRecorderCodecInfo", "MaxSupportedBitrate -> " + hbRecorderCodecInfo.getMaxSupportedBitrate(mMimeType));
-            Log.e("HBRecorderCodecInfo", "isSizeAndFrameRateSupported @ Width = " + mWidth + " Height = " + mHeight + " FPS = " + mFPS + " -> " + isSizeAndFrameRateSupported);
-            Log.e("HBRecorderCodecInfo", "isSizeSupported @ Width = " + mWidth + " Height = " + mHeight + " -> " + hbRecorderCodecInfo.isSizeSupported(mWidth, mHeight, mMimeType));
-            Log.e("HBRecorderCodecInfo", "Default Video Format = " + hbRecorderCodecInfo.getDefaultVideoFormat());
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            int mWidth = hbRecorder.getDefaultWidth();
+            int mHeight = hbRecorder.getDefaultHeight();
+            String mMimeType = "video/avc";
+            int mFPS = 30;
+            if (hbRecorderCodecInfo.isMimeTypeSupported(mMimeType)) {
+                String defaultVideoEncoder = hbRecorderCodecInfo.getDefaultVideoEncoderName(mMimeType);
+                boolean isSizeAndFramerateSupported = hbRecorderCodecInfo.isSizeAndFramerateSupported(mWidth, mHeight, mFPS, mMimeType, ORIENTATION_PORTRAIT);
+                Log.e("EXAMPLE", "THIS IS AN EXAMPLE OF HOW TO USE THE (HBRecorderCodecInfo) TO GET CODEC INFO:");
+                Log.e("HBRecorderCodecInfo", "defaultVideoEncoder for (" + mMimeType + ") -> " + defaultVideoEncoder);
+                Log.e("HBRecorderCodecInfo", "MaxSupportedFrameRate -> " + hbRecorderCodecInfo.getMaxSupportedFrameRate(mWidth, mHeight, mMimeType));
+                Log.e("HBRecorderCodecInfo", "MaxSupportedBitrate -> " + hbRecorderCodecInfo.getMaxSupportedBitrate(mMimeType));
+                Log.e("HBRecorderCodecInfo", "isSizeAndFramerateSupported @ Width = "+mWidth+" Height = "+mHeight+" FPS = "+mFPS+" -> " + isSizeAndFramerateSupported);
+                Log.e("HBRecorderCodecInfo", "isSizeSupported @ Width = "+mWidth+" Height = "+mHeight+" -> " + hbRecorderCodecInfo.isSizeSupported(mWidth, mHeight, mMimeType));
+                Log.e("HBRecorderCodecInfo", "Default Video Format = " + hbRecorderCodecInfo.getDefaultVideoFormat());
 
-            HashMap<String, String> supportedVideoMimeTypes = hbRecorderCodecInfo.getSupportedVideoMimeTypes();
-            for (Map.Entry<String, String> entry : supportedVideoMimeTypes.entrySet()) {
-                Log.e("HBRecorderCodecInfo", "Supported VIDEO encoders and mime types : " + entry.getKey() + " -> " + entry.getValue());
+                HashMap<String, String> supportedVideoMimeTypes = hbRecorderCodecInfo.getSupportedVideoMimeTypes();
+                for (Map.Entry<String, String> entry : supportedVideoMimeTypes.entrySet()) {
+                    Log.e("HBRecorderCodecInfo", "Supported VIDEO encoders and mime types : " + entry.getKey() + " -> " + entry.getValue());
+                }
+
+                HashMap<String, String> supportedAudioMimeTypes = hbRecorderCodecInfo.getSupportedAudioMimeTypes();
+                for (Map.Entry<String, String> entry : supportedAudioMimeTypes.entrySet()) {
+                    Log.e("HBRecorderCodecInfo", "Supported AUDIO encoders and mime types : " + entry.getKey() + " -> " + entry.getValue());
+                }
+
+                ArrayList<String> supportedVideoFormats = hbRecorderCodecInfo.getSupportedVideoFormats();
+                for (int j = 0; j < supportedVideoFormats.size(); j++) {
+                    Log.e("HBRecorderCodecInfo", "Available Video Formats : " + supportedVideoFormats.get(j));
+                }
+            }else{
+                Log.e("HBRecorderCodecInfo", "MimeType not supported");
             }
 
-            HashMap<String, String> supportedAudioMimeTypes = hbRecorderCodecInfo.getSupportedAudioMimeTypes();
-            for (Map.Entry<String, String> entry : supportedAudioMimeTypes.entrySet()) {
-                Log.e("HBRecorderCodecInfo", "Supported AUDIO encoders and mime types : " + entry.getKey() + " -> " + entry.getValue());
-            }
-
-            ArrayList<String> supportedVideoFormats = hbRecorderCodecInfo.getSupportedVideoFormats();
-            for (int j = 0; j < supportedVideoFormats.size(); j++) {
-                Log.e("HBRecorderCodecInfo", "Available Video Formats : " + supportedVideoFormats.get(j));
-            }
-        } else {
-            Log.e("HBRecorderCodecInfo", "MimeType not supported");
         }
 
     }
 
+    //Create Folder
+    //Only call this on Android 9 and lower (getExternalStoragePublicDirectory is deprecated)
+    //This can still be used on Android 10> but you will have to add android:requestLegacyExternalStorage="true" in your Manifest
+    private void createFolder() {
+        File f1 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "HBRecorder");
+        if (!f1.exists()) {
+            if (f1.mkdirs()) {
+                Log.i("Folder ", "created");
+            }
+        }
+    }
+
     //Init Views
     private void initViews() {
-        startBtn = findViewById(R.id.button_start);
-        pauseBtn = findViewById(R.id.button_pause);
+        startbtn = findViewById(R.id.button_start);
         radioGroup = findViewById(R.id.radio_group);
         recordAudioCheckBox = findViewById(R.id.audio_check_box);
         custom_settings_switch = findViewById(R.id.custom_settings_switch);
@@ -187,69 +197,71 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
 
     //Start Button OnClickListener
     private void setOnClickListeners() {
-        startBtn.setOnClickListener(v -> {
-            //first check if permissions was granted
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO, PERMISSION_REQ_ID_RECORD_AUDIO)) {
-                    hasPermissions = true;
-                }
-            } else {
-                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO, PERMISSION_REQ_ID_RECORD_AUDIO) && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, PERMISSION_REQ_ID_WRITE_EXTERNAL_STORAGE)) {
-                    hasPermissions = true;
-                }
-            }
-
-            if (hasPermissions) {
-                //check if recording is in progress
-                //and stop it if it is
-                if (hbRecorder.isBusyRecording()) {
-                    hbRecorder.stopScreenRecording();
-                    startBtn.setText(R.string.start_recording);
-                }
-                //else start recording
-                else {
-                    startRecordingScreen();
-                }
-            }
-        });
-
-        pauseBtn.setOnClickListener(v -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                if (hbRecorder.isBusyRecording()) {
-                    if (hbRecorder.isRecordingPaused()) {
-                        hbRecorder.resumeScreenRecording();
-                        pauseBtn.setText(R.string.pause_recording);
-                    } else {
-                        hbRecorder.pauseScreenRecording();
-                        pauseBtn.setText(R.string.resume_recording);
+        startbtn.setOnClickListener(v -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                //first check if permissions was granted
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS, PERMISSION_REQ_POST_NOTIFICATIONS) && checkSelfPermission(Manifest.permission.RECORD_AUDIO, PERMISSION_REQ_ID_RECORD_AUDIO)) {
+                        hasPermissions = true;
                     }
                 }
+                else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO, PERMISSION_REQ_ID_RECORD_AUDIO)) {
+                        hasPermissions = true;
+                    }
+                } else {
+                    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO, PERMISSION_REQ_ID_RECORD_AUDIO) && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, PERMISSION_REQ_ID_WRITE_EXTERNAL_STORAGE)) {
+                        hasPermissions = true;
+                    }
+                }
+
+                if (hasPermissions) {
+                    //check if recording is in progress
+                    //and stop it if it is
+                    if (hbRecorder.isBusyRecording()) {
+                        hbRecorder.stopScreenRecording();
+                        startbtn.setText(R.string.start_recording);
+                    }
+                    //else start recording
+                    else {
+                        startRecordingScreen();
+                    }
+                }
+            } else {
+                showLongToast("This library requires API 21>");
             }
         });
     }
 
     //Check if HD/SD Video should be recorded
     private void setRadioGroupCheckListener() {
-        radioGroup.setOnCheckedChangeListener((radioGroup, checkedId) -> {
+        radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup radioGroup, int checkedId) {
 
-            if (checkedId == R.id.hd_button) {
-                //Ser HBRecorder to HD
-                wasHDSelected = true;
-            } else if (checkedId == R.id.sd_button) {
-                //Ser HBRecorder to SD
-                wasHDSelected = false;
+                if (checkedId == R.id.hd_button) {
+                    //Ser HBRecorder to HD
+                    wasHDSelected = true;
+                } else if (checkedId == R.id.sd_button) {
+                    //Ser HBRecorder to SD
+                    wasHDSelected = false;
+                }
             }
         });
     }
 
     //Check if audio should be recorded
     private void setRecordAudioCheckBoxListener() {
-        recordAudioCheckBox.setOnCheckedChangeListener((compoundButton, isChecked) -> {
-            //Enable/Disable audio
-            isAudioEnabled = isChecked;
+        recordAudioCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                //Enable/Disable audio
+                isAudioEnabled = isChecked;
+            }
         });
     }
 
+    // Called when recording starts
     @Override
     public void HBRecorderOnStart() {
         Log.e("HBRecorder", "HBRecorderOnStart called");
@@ -259,37 +271,24 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
     //This will be called after the file was created
     @Override
     public void HBRecorderOnComplete() {
-        startBtn.setText(R.string.start_recording);
+        startbtn.setText(R.string.start_recording);
         showLongToast("Saved Successfully");
-        //Update gallery depending on SDK Level
-        if (hbRecorder.wasUriSet()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                updateGalleryUri();
-            } else {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            //Update gallery depending on SDK Level
+            if (hbRecorder.wasUriSet()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ) {
+                    updateGalleryUri();
+                } else {
+                    refreshGalleryFile();
+                }
+            }else{
                 refreshGalleryFile();
             }
-        } else {
-            refreshGalleryFile();
         }
 
     }
 
-    private void refreshGalleryFile() {
-        MediaScannerConnection.scanFile(this,
-                new String[]{hbRecorder.getFilePath()}, null,
-                (path, uri) -> {
-                    Log.i("ExternalStorage", "Scanned " + path + ":");
-                    Log.i("ExternalStorage", "-> uri=" + uri);
-                });
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.Q)
-    private void updateGalleryUri() {
-        contentValues.clear();
-        contentValues.put(MediaStore.Video.Media.IS_PENDING, 0);
-        getContentResolver().update(mUri, contentValues, null, null);
-    }
-
+    // Called when error occurs
     @Override
     public void HBRecorderOnError(int errorCode, String reason) {
         // Error 38 happens when
@@ -301,20 +300,52 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
 
         if (errorCode == SETTINGS_ERROR) {
             showLongToast(getString(R.string.settings_not_supported_message));
-        } else if (errorCode == MAX_FILE_SIZE_REACHED_ERROR) {
+        } else if ( errorCode == MAX_FILE_SIZE_REACHED_ERROR) {
             showLongToast(getString(R.string.max_file_size_reached_message));
         } else {
             showLongToast(getString(R.string.general_recording_error_message));
             Log.e("HBRecorderOnError", reason);
         }
 
-        startBtn.setText(R.string.start_recording);
+        startbtn.setText(R.string.start_recording);
 
+    }
+
+    // Called when recording has been paused
+    @Override
+    public void HBRecorderOnPause() {
+        // Called when recording was paused
+    }
+
+    // Calld when recording has resumed
+    @Override
+    public void HBRecorderOnResume() {
+        // Called when recording was resumed
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private void refreshGalleryFile() {
+        MediaScannerConnection.scanFile(this,
+                new String[]{hbRecorder.getFilePath()}, null,
+                new MediaScannerConnection.OnScanCompletedListener() {
+                    public void onScanCompleted(String path, Uri uri) {
+                        Log.i("ExternalStorage", "Scanned " + path + ":");
+                        Log.i("ExternalStorage", "-> uri=" + uri);
+                    }
+                });
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    private void updateGalleryUri(){
+        contentValues.clear();
+        contentValues.put(MediaStore.Video.Media.IS_PENDING, 0);
+        getContentResolver().update(mUri, contentValues, null, null);
     }
 
     //Start recording screen
     //It is important to call it like this
     //hbRecorder.startScreenRecording(data); should only be called in onActivityResult
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void startRecordingScreen() {
         if (custom_settings_switch.isChecked()) {
             //WHEN SETTING CUSTOM SETTINGS YOU MUST SET THIS!!!
@@ -322,16 +353,18 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
             customSettings();
             MediaProjectionManager mediaProjectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
             Intent permissionIntent = mediaProjectionManager != null ? mediaProjectionManager.createScreenCaptureIntent() : null;
-            startMediaProjection.launch(permissionIntent);
+            startActivityForResult(permissionIntent, SCREEN_RECORD_REQUEST_CODE);
         } else {
             quickSettings();
             MediaProjectionManager mediaProjectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
             Intent permissionIntent = mediaProjectionManager != null ? mediaProjectionManager.createScreenCaptureIntent() : null;
-            startMediaProjection.launch(permissionIntent);
+            startActivityForResult(permissionIntent, SCREEN_RECORD_REQUEST_CODE);
         }
-        startBtn.setText(R.string.stop_recording);
+        startbtn.setText(R.string.stop_recording);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    // Example of how to set custom settings
     private void customSettings() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -481,6 +514,7 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
     }
 
     //Get/Set the selected settings
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void quickSettings() {
         hbRecorder.setAudioBitrate(128000);
         hbRecorder.setAudioSamplingRate(44100);
@@ -488,9 +522,25 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
         hbRecorder.isAudioEnabled(isAudioEnabled);
         //Customise Notification
         hbRecorder.setNotificationSmallIcon(R.drawable.icon);
+        //hbRecorder.setNotificationSmallIconVector(R.drawable.ic_baseline_videocam_24);
         hbRecorder.setNotificationTitle(getString(R.string.stop_recording_notification_title));
         hbRecorder.setNotificationDescription(getString(R.string.stop_recording_notification_message));
     }
+
+    // Example of how to set the max file size
+
+    /*@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private void setRecorderMaxFileSize() {
+        String s = maxFileSizeInK.getText().toString();
+        long maxFileSizeInKilobytes;
+        try {
+            maxFileSizeInKilobytes = Long.parseLong(s);
+        } catch (NumberFormatException e) {
+            maxFileSizeInKilobytes = 0;
+        }
+        hbRecorder.setMaxFileSize(maxFileSizeInKilobytes * 1024); // Convert to bytes
+
+    }*/
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -525,6 +575,14 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
+            case PERMISSION_REQ_POST_NOTIFICATIONS:
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    checkSelfPermission(Manifest.permission.RECORD_AUDIO, PERMISSION_REQ_ID_RECORD_AUDIO);
+                } else {
+                    hasPermissions = false;
+                    showLongToast("No permission for " + Manifest.permission.POST_NOTIFICATIONS);
+                }
+                break;
             case PERMISSION_REQ_ID_RECORD_AUDIO:
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, PERMISSION_REQ_ID_WRITE_EXTERNAL_STORAGE);
@@ -542,7 +600,9 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
                         hasPermissions = true;
                         //Permissions was provided
                         //Start screen recording
-                        startRecordingScreen();
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            startRecordingScreen();
+                        }
                     } else {
                         hasPermissions = false;
                         showLongToast("No permission for " + Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -554,9 +614,33 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
         }
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if (requestCode == SCREEN_RECORD_REQUEST_CODE) {
+                if (resultCode == RESULT_OK) {
+                    //Set file path or Uri depending on SDK version
+                    setOutputPath();
+                    //Start screen recording
+                    hbRecorder.startScreenRecording(data, resultCode);
+
+                }
+            }
+        }
+    }
+
+    //For Android 10> we will pass a Uri to HBRecorder
+    //This is not necessary - You can still use getExternalStoragePublicDirectory
+    //But then you will have to add android:requestLegacyExternalStorage="true" in your Manifest
+    //IT IS IMPORTANT TO SET THE FILE NAME THE SAME AS THE NAME YOU USE FOR TITLE AND DISPLAY_NAME
+    ContentResolver resolver;
+    ContentValues contentValues;
+    Uri mUri;
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void setOutputPath() {
         String filename = generateFileName();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !custom_settings_switch.isChecked()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             resolver = getContentResolver();
             contentValues = new ContentValues();
             contentValues.put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/" + "HBRecorder");
@@ -567,12 +651,10 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
             //FILE NAME SHOULD BE THE SAME
             hbRecorder.setFileName(filename);
             hbRecorder.setOutputUri(mUri);
-        } else {
-            // Path output testing
-            File dir = getCacheDir();
-            Log.e("HBRecorder", "Setting output path to: " + dir.getPath());
-            hbRecorder.setOutputPath(dir.getPath());
-          }
+        }else{
+            createFolder();
+            hbRecorder.setOutputPath(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES) +"/HBRecorder");
+        }
     }
 
     //Generate a timestamp to be used as a file name
@@ -585,5 +667,13 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
     //Show Toast
     private void showLongToast(final String msg) {
         Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
+    }
+
+    //drawable to byte[]
+    private byte[] drawable2ByteArray(@DrawableRes int drawableId) {
+        Bitmap icon = BitmapFactory.decodeResource(getResources(), drawableId);
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        icon.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        return stream.toByteArray();
     }
 }
