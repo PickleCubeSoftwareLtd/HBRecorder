@@ -11,7 +11,6 @@ import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.os.Environment;
 
 import androidx.annotation.DrawableRes;
@@ -26,6 +25,7 @@ import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.util.Objects;
 
 import static com.hbisoft.hbrecorder.Constants.ERROR_KEY;
 import static com.hbisoft.hbrecorder.Constants.ERROR_REASON_KEY;
@@ -42,8 +42,8 @@ import static com.hbisoft.hbrecorder.Constants.ON_RESUME_KEY;
  * Copyright (c) 2019 . All rights reserved.
  */
 
-@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-public class HBRecorder implements MyListener {
+@SuppressWarnings("unused")
+public class HBRecorder implements FileObserverCallback {
     private int mScreenWidth;
     private int mScreenHeight;
     private int mScreenDensity;
@@ -76,7 +76,6 @@ public class HBRecorder implements MyListener {
     boolean isMaxDurationSet = false;
     int maxDuration = 0;
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public HBRecorder(Context context, HBRecorderListener listener) {
         this.context = context.getApplicationContext();
         this.hbRecorderListener = listener;
@@ -452,16 +451,13 @@ public class HBRecorder implements MyListener {
                 onTick(0);
                 // Since the timer is running on a different thread
                 // UI chances should be called from the UI Thread
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            stopScreenRecording();
-                            observer.stopWatching();
-                            hbRecorderListener.HBRecorderOnComplete();
-                        } catch (Exception e){
-                            e.printStackTrace();
-                        }
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    try {
+                        stopScreenRecording();
+                        observer.stopWatching();
+                        hbRecorderListener.HBRecorderOnComplete();
+                    } catch (Exception e){
+                        e.printStackTrace();
                     }
                 });
             }
@@ -482,8 +478,10 @@ public class HBRecorder implements MyListener {
 
     /*Complete callback method*/
     @Override
-    public void onCompleteCallback() {
-        observer.stopWatching();
-        hbRecorderListener.HBRecorderOnComplete();
+    public void onFileComplete(String file) {
+        if(Objects.equals(file, getFilePath())) {
+            observer.stopWatching();
+            hbRecorderListener.HBRecorderOnComplete();
+        }
     }
 }

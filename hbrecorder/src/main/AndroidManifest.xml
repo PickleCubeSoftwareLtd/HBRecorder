@@ -7,7 +7,7 @@
 
         <service android:name="com.hbisoft.hbrecorder.ScreenRecordService"
             android:foregroundServiceType="mediaProjection"
-            tools:targetApi="q" />
+            tools:targetApi="q"/>
 
         <receiver android:name="com.hbisoft.hbrecorder.NotificationReceiver"/>
 

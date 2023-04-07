@@ -7,6 +7,7 @@ import java.util.Stack;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 
 class FileObserver extends android.os.FileObserver {
@@ -14,13 +15,13 @@ class FileObserver extends android.os.FileObserver {
     private List<SingleFileObserver> mObservers;
     private final String mPath;
     private final int mMask;
-    private final MyListener ml;
+    private final FileObserverCallback callback;
 
-    FileObserver(String path, MyListener ml) {
+    FileObserver(String path, FileObserverCallback callback) {
         super(path, ALL_EVENTS);
         mPath = path;
         mMask = ALL_EVENTS;
-        this.ml = ml;
+        this.callback = callback;
     }
 
 
@@ -65,17 +66,13 @@ class FileObserver extends android.os.FileObserver {
     @Override
     public void onEvent(int event, final String path) {
         if (event == android.os.FileObserver.CLOSE_WRITE) {
-            new Handler(Looper.getMainLooper()).post(new Runnable() {
-                public void run() {
-                    ml.onCompleteCallback();
-                }
-            });
+            Log.d("HBRecorderFileObserver", "CLOSE_WRITE for file: " + path);
+            new Handler(Looper.getMainLooper()).post(() -> callback.onFileComplete(path));
         }
     }
 
     class SingleFileObserver extends android.os.FileObserver {
         final String mPath;
-
 
         SingleFileObserver(String path, int mask) {
             super(path, mask);
