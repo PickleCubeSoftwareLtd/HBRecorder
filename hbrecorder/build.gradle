@@ -2,6 +2,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
 
 android {
+    namespace 'com.hbisoft.hbrecorder'
     compileSdk 34
 
     defaultConfig {
@@ -17,7 +18,12 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-    namespace 'com.hbisoft.hbrecorder'
+
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+        }
+    }
 
 }
 
@@ -35,8 +41,11 @@ publishing {
         maven(MavenPublication) {
             groupId 'com.hbisoft.hbrecorder'
             artifactId 'hbrecorder'
-            version '4.0.3'
-            artifact("$buildDir/outputs/aar/hbrecorder-release.aar")
+            version '4.0.4'
+
+            afterEvaluate {
+                from components.release
+            }
         }
     }
 }
