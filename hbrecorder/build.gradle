@@ -33,9 +33,9 @@ dependencies {
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            groupId = 'com.github.PickleCubeSoftwareLtd'
+            group 'com.hbisoft.hbrecorder'
             artifactId = 'HBRecorder'
-            version = '4.0.1'
+            version '4.0.2'
         }
     }
 }
