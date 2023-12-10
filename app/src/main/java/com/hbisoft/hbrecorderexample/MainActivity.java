@@ -49,6 +49,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import static android.Manifest.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION;
 import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
 import static com.hbisoft.hbrecorder.Constants.MAX_FILE_SIZE_REACHED_ERROR;
 import static com.hbisoft.hbrecorder.Constants.SETTINGS_ERROR;
@@ -88,6 +89,7 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
     private static final int SCREEN_RECORD_REQUEST_CODE = 777;
     private static final int PERMISSION_REQ_ID_RECORD_AUDIO = 22;
     private static final int PERMISSION_REQ_POST_NOTIFICATIONS = 33;
+    private static final int PERMISSION_FOREGROUND_SERVICE_MEDIA_PROJECTION = 34;
     private static final int PERMISSION_REQ_ID_WRITE_EXTERNAL_STORAGE = PERMISSION_REQ_ID_RECORD_AUDIO + 1;
     private boolean hasPermissions = false;
 
@@ -96,6 +98,7 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
 
     //Start/Stop Button
     private Button startbtn;
+    private Button pauseResumeBtn;
 
     //HD/SD quality
     private RadioGroup radioGroup;
@@ -190,6 +193,7 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
     //Init Views
     private void initViews() {
         startbtn = findViewById(R.id.button_start);
+        pauseResumeBtn = findViewById(R.id.button_pause);
         radioGroup = findViewById(R.id.radio_group);
         recordAudioCheckBox = findViewById(R.id.audio_check_box);
         custom_settings_switch = findViewById(R.id.custom_settings_switch);
@@ -197,13 +201,33 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
 
     //Start Button OnClickListener
     private void setOnClickListeners() {
+        pauseResumeBtn.setOnClickListener(v -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                if (hbRecorder.isRecordingPaused()) {
+                    hbRecorder.resumeScreenRecording();
+                    pauseResumeBtn.setText("Pause");
+                } else {
+                    hbRecorder.pauseScreenRecording();
+                    pauseResumeBtn.setText("Resume");
+                }
+            }
+        });
+
         startbtn.setOnClickListener(v -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 //first check if permissions was granted
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS, PERMISSION_REQ_POST_NOTIFICATIONS) && checkSelfPermission(Manifest.permission.RECORD_AUDIO, PERMISSION_REQ_ID_RECORD_AUDIO)) {
+                    var medaProjectionServicePermission = true;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        medaProjectionServicePermission = checkSelfPermission(Manifest.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION, PERMISSION_FOREGROUND_SERVICE_MEDIA_PROJECTION);
+                    }
+
+                    if (medaProjectionServicePermission && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS, PERMISSION_REQ_POST_NOTIFICATIONS)
+                                    && checkSelfPermission(Manifest.permission.RECORD_AUDIO, PERMISSION_REQ_ID_RECORD_AUDIO)) {
                         hasPermissions = true;
                     }
+
+
                 }
                 else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     if (checkSelfPermission(Manifest.permission.RECORD_AUDIO, PERMISSION_REQ_ID_RECORD_AUDIO)) {
@@ -575,6 +599,16 @@ public class MainActivity extends AppCompatActivity implements HBRecorderListene
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
+            case PERMISSION_FOREGROUND_SERVICE_MEDIA_PROJECTION:
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        checkSelfPermission(Manifest.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION, PERMISSION_FOREGROUND_SERVICE_MEDIA_PROJECTION);
+                    }
+                } else {
+                    hasPermissions = false;
+                    showLongToast("No permission for FOREGROUND_SERVICE_MEDIA_PROJECTION");
+                }
+                break;
             case PERMISSION_REQ_POST_NOTIFICATIONS:
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     checkSelfPermission(Manifest.permission.RECORD_AUDIO, PERMISSION_REQ_ID_RECORD_AUDIO);

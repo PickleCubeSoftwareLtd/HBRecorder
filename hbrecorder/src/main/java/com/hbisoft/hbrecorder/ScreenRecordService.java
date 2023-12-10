@@ -45,21 +45,10 @@ import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.Objects;
 
-import static com.hbisoft.hbrecorder.Constants.ERROR_KEY;
-import static com.hbisoft.hbrecorder.Constants.ERROR_REASON_KEY;
-import static com.hbisoft.hbrecorder.Constants.MAX_FILE_SIZE_REACHED_ERROR;
-import static com.hbisoft.hbrecorder.Constants.MAX_FILE_SIZE_KEY;
-import static com.hbisoft.hbrecorder.Constants.NO_SPECIFIED_MAX_SIZE;
-import static com.hbisoft.hbrecorder.Constants.ON_COMPLETE;
-import static com.hbisoft.hbrecorder.Constants.ON_COMPLETE_KEY;
 import static com.hbisoft.hbrecorder.Constants.ON_PAUSE;
 import static com.hbisoft.hbrecorder.Constants.ON_PAUSE_KEY;
 import static com.hbisoft.hbrecorder.Constants.ON_RESUME;
 import static com.hbisoft.hbrecorder.Constants.ON_RESUME_KEY;
-import static com.hbisoft.hbrecorder.Constants.ON_START;
-import static com.hbisoft.hbrecorder.Constants.ON_START_KEY;
-import static com.hbisoft.hbrecorder.Constants.SETTINGS_ERROR;
-
 /**
  * Created by HBiSoft on 13 Aug 2019
  * Copyright (c) 2019 . All rights reserved.
@@ -223,14 +212,7 @@ public class ScreenRecordService extends Service {
                         Notification notification;
 
                         Intent myIntent = new Intent(this, NotificationReceiver.class);
-                        PendingIntent pendingIntent;
-
-                        if (Build.VERSION.SDK_INT >= 31) {
-                            pendingIntent = PendingIntent.getBroadcast(this, 0, myIntent, PendingIntent.FLAG_IMMUTABLE);
-                        } else {
-                            pendingIntent = PendingIntent.getBroadcast(this, 0, myIntent, 0);
-
-                        }
+                        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, myIntent, PendingIntent.FLAG_IMMUTABLE);
 
                         Notification.Action action = new Notification.Action.Builder(
                                 Icon.createWithResource(this, android.R.drawable.presence_video_online),
@@ -558,7 +540,19 @@ public class ScreenRecordService extends Service {
     }
 
     private void initVirtualDisplay() {
-        mVirtualDisplay = mMediaProjection.createVirtualDisplay(TAG, mScreenWidth, mScreenHeight, mScreenDensity, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, mMediaRecorder.getSurface(), null, null);
+        mMediaProjection.registerCallback(new MediaProjection.Callback() {
+            @Override
+            public void onStop() {
+                super.onStop();
+            }
+        }, null);
+        mVirtualDisplay = mMediaProjection.createVirtualDisplay(
+                TAG,
+                mScreenWidth, mScreenHeight, mScreenDensity,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                mMediaRecorder.getSurface(),
+               null,
+                null);
     }
 
     @Override
