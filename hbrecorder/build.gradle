@@ -32,10 +32,11 @@ dependencies {
 
 publishing {
     publications {
-        mavenJava(MavenPublication) {
-            group 'com.hbisoft.hbrecorder'
-            artifactId = 'HBRecorder'
-            version '4.0.2'
+        maven(MavenPublication) {
+            groupId 'com.hbisoft.hbrecorder'
+            artifactId 'hbrecorder'
+            version '4.0.3'
+            artifact("$buildDir/outputs/aar/hbrecorder-release.aar")
         }
     }
 }
